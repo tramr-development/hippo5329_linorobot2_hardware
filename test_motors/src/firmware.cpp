@@ -82,8 +82,8 @@ Encoder motor2_encoder(MOTOR2_ENCODER_A, MOTOR2_ENCODER_B, COUNTS_PER_REV2, MOTO
 Encoder motor3_encoder(MOTOR3_ENCODER_A, MOTOR3_ENCODER_B, COUNTS_PER_REV3, MOTOR3_ENCODER_INV);
 Encoder motor4_encoder(MOTOR4_ENCODER_A, MOTOR4_ENCODER_B, COUNTS_PER_REV4, MOTOR4_ENCODER_INV);
 
-Motor motor1_controller(PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
-Motor motor2_controller(PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
+NoReverseMotor motor1_controller(MOTOR1_PWM_THRESHOLD, PWM_FREQUENCY, PWM_BITS, MOTOR1_INV, MOTOR1_PWM, MOTOR1_IN_A, MOTOR1_IN_B);
+NoReverseMotor motor2_controller(MOTOR2_PWM_THRESHOLD, PWM_FREQUENCY, PWM_BITS, MOTOR2_INV, MOTOR2_PWM, MOTOR2_IN_A, MOTOR2_IN_B);
 Motor motor3_controller(PWM_FREQUENCY, PWM_BITS, MOTOR3_INV, MOTOR3_PWM, MOTOR3_IN_A, MOTOR3_IN_B);
 Motor motor4_controller(PWM_FREQUENCY, PWM_BITS, MOTOR4_INV, MOTOR4_PWM, MOTOR4_IN_A, MOTOR4_IN_B);
 
@@ -135,11 +135,11 @@ void setup()
 
 void loop() {
     static unsigned tk = 0; // tick
-    const unsigned run_time = 8; // run time of each motor
+    const unsigned run_time = 5; // run time of each motor
     const unsigned cycle = run_time * total_motors;
     unsigned current_motor = tk / run_time % total_motors;
     unsigned direction = tk / cycle % 2; // 0 forward, 1 reverse
-    const int pwm_max = (1 << PWM_BITS) - 1;
+    const int pwm_max = (int)(((1 << PWM_BITS) - 1) * PWM_MAX_SAFETY_FACTOR);
     static float max_rpm, stopping;
 
     setLed(direction ? LOW : HIGH);
@@ -150,7 +150,9 @@ void loop() {
 
     delay(1000);
     float current_rpm1 = motor1_encoder.getRPM();
+    int32_t current_ticks1 = motor1_encoder.read();
     float current_rpm2 = motor2_encoder.getRPM();
+    int32_t current_ticks2 = motor2_encoder.read();
     float current_rpm3 = motor3_encoder.getRPM();
     float current_rpm4 = motor4_encoder.getRPM();
     if (current_motor == 0 && tk % run_time == run_time - 1) max_rpm = current_rpm1;
@@ -170,12 +172,12 @@ void loop() {
         syslog(LOG_INFO, "MOTOR%d SPEED %6.2f m/s STOP %6.3f m\n", current_motor ? current_motor : total_motors,
 	       max_linear_speed, max_linear_speed * stopping / max_rpm);
     }
-    Serial.printf("MOTOR%d %s RPM %8.1f %8.1f %8.1f %8.1f\n",
+    Serial.printf("MOTOR%d\t%s\tRPM\t%8.1f\t%8.1f\t%d\t%d\n",
 	   current_motor + 1, direction ? "REV" : "FWD",
-	   current_rpm1, current_rpm2, current_rpm3, current_rpm4);
-    syslog(LOG_INFO, "MOTOR%d %s RPM %8.1f %8.1f %8.1f %8.1f\n",
+	   current_rpm1, current_rpm2, current_ticks1, current_ticks2);
+    syslog(LOG_INFO, "MOTOR%d %s RPM %8.1f %8.1f %d %d\n",
 	   current_motor + 1, direction ? "REV" : "FWD",
-	   current_rpm1, current_rpm2, current_rpm3, current_rpm4);
+	   current_rpm1, current_rpm2, current_ticks1, current_ticks2);
     tk++;
     runWifis();
     runOta();

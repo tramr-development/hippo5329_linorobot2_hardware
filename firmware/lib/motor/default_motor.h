@@ -83,21 +83,21 @@ class Generic2: public MotorInterface
 
 class Generic1: public MotorInterface
 {
-    private:
+    protected:
         int in_pin_;
         int pwm_pin_;
         int pwm_bits_;
         float pwm_frequency_;
 
     protected:
-        void forward(int pwm) override
+        virtual void forward(int pwm) override
         {
         if (in_pin_ < 0) return;
             setLevel(in_pin_, HIGH);
             setPwm(pwm_pin_, abs(pwm));
         }
 
-        void reverse(int pwm) override
+        virtual void reverse(int pwm) override
         {
         if (in_pin_ < 0) return;
             setLevel(in_pin_, LOW);
@@ -129,6 +129,39 @@ class Generic1: public MotorInterface
         if (in_pin_ < 0) return;
             setPwm(pwm_pin_, 0);
         }
+};
+
+class NoReverseMotor: public Generic1
+{
+    private:
+        int pwm_floor_;
+
+    protected:
+        void forward(int pwm) override
+        {
+            if (in_pin_ < 0) return;
+
+            setLevel(in_pin_, HIGH);
+            int pwm_lcl = abs(pwm);
+            if (pwm_floor_ > 0 && pwm_lcl < pwm_floor_)
+                pwm_lcl = pwm_floor_;
+            setPwm(pwm_pin_, pwm_lcl);
+        }
+
+        void reverse(int pwm) override
+        {
+            if (in_pin_ < 0) return;
+            setLevel(in_pin_, LOW);
+            setPwm(pwm_pin_, 0); // reverse spin is not allowed - set pwm to zero
+        }
+
+    public:
+        NoReverseMotor(float pwm_threshold, float pwm_frequency, int pwm_bits, bool invert, int pwm_pin, int in_pin, int unused=-1):
+            Generic1(pwm_frequency, pwm_bits, invert, pwm_pin, in_pin, unused)
+            {
+                int pwm_max = (1 << pwm_bits) - 1;
+                pwm_floor_ = static_cast<int>(pwm_max * pwm_threshold);
+            }
 };
 
 class BTS7960: public MotorInterface

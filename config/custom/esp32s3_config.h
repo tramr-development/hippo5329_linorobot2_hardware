@@ -24,13 +24,13 @@
 
 //uncomment the motor driver you're using
 // #define USE_GENERIC_2_IN_MOTOR_DRIVER      // Motor drivers with 2 Direction Pins(INA, INB) and 1 PWM(ENABLE) pin ie. L298, L293, VNH5019
-// #define USE_GENERIC_1_IN_MOTOR_DRIVER   // Motor drivers with 1 Direction Pin(INA) and 1 PWM(ENABLE) pin.
-#define USE_BTS7960_MOTOR_DRIVER        // BTS7970 Motor Driver using A4950 (<40V) module or DRV8833 (<10V)
+#define USE_GENERIC_1_IN_MOTOR_DRIVER   // Motor drivers with 1 Direction Pin(INA) and 1 PWM(ENABLE) pin.
+//#define USE_BTS7960_MOTOR_DRIVER        // BTS7970 Motor Driver using A4950 (<40V) module or DRV8833 (<10V)
 // #define USE_ESC_MOTOR_DRIVER            // Motor ESC for brushless motors
 
 //uncomment the IMU you're using
 // #define USE_GY85_IMU
-// #define USE_MPU6050_IMU
+#define USE_MPU6050_IMU
 // #define USE_MPU9150_IMU
 // #define USE_MPU9250_IMU
 // #define USE_QMI8658_IMU
@@ -43,9 +43,14 @@
 // #define IMU_TWEAK {}
 // #define MAG_TWEAK {}
 
-#define K_P 0.6                             // P constant
-#define K_I 0.8                             // I constant
-#define K_D 0.5                             // D constant
+// To fix a motor that accelerates too fast and overshoots its target RPM, 
+// decrease the Proportional gain (Kp) to soften the initial acceleration 
+// and significantly increase the Derivative gain (Kd) to dampen overshoot 
+// and act as a "brake". If overshoot persists, decrease the Integral gain 
+// (Ki) to prevent the motor from "remembering" too much error
+#define K_P 0.6                             // Kp (proportional gain) constant
+#define K_I 0.8                             // Ki (integral gain) constant
+#define K_D 0.5                             // Kd (derivative gain) constant
 
 #define ACCEL_COV { 0.01, 0.01, 0.01 }
 #define GYRO_COV { 0.001, 0.001, 0.001 }
@@ -63,30 +68,52 @@ ROBOT ORIENTATION
 */
 
 //define your robot' specs here
-#define MOTOR_MAX_RPM 150                   // motor's max RPM
-#define MAX_RPM_RATIO 0.85                  // max RPM allowed for each MAX_RPM_ALLOWED = MOTOR_MAX_RPM * MAX_RPM_RATIO
-#define MOTOR_OPERATING_VOLTAGE 12          // motor's operating voltage (used to calculate max RPM)
-#define MOTOR_POWER_MAX_VOLTAGE 12          // max voltage of the motor's power source (used to calculate max RPM)
-#define MOTOR_POWER_MEASURED_VOLTAGE 12     // current voltage reading of the power connected to the motor (used for calibration)
-#define COUNTS_PER_REV1 450                 // wheel1 encoder's no of ticks per rev
-#define COUNTS_PER_REV2 450                 // wheel2 encoder's no of ticks per rev
+#define MOTOR_MAX_RPM 181                   // motor's max RPM
+// RPM Calculation based on this website - https://areacalculators.com/wheel-speed-calculator/
+// using the Hover-1 Rocket's advertised max speed of 7 mph and 6.5 inch wheel diameter
+
+#define MAX_RPM_RATIO 0.48                  // max RPM allowed for each MAX_RPM_ALLOWED = MOTOR_MAX_RPM * MAX_RPM_RATIO
+// 7 mph is about 3.13 m/s. We want to cap the speed at 1.5 m/s, which is 48% of the max speed.
+
+// some custom settings
+#define MOTOR1_PWM_THRESHOLD 0.0            // ratio of PWM max to overcome static friction (0.0 means do not apply this setting)
+#define MOTOR2_PWM_THRESHOLD 0.0            // ratio of PWM max to overcome static friction (0.0 < threshold <= 1.0)
+#define MOTOR1_PWM_MAX_SAFETY_FACTOR 0.65          // set to 1.0, or less to cap the PWM_MAX value
+#define MOTOR2_PWM_MAX_SAFETY_FACTOR 0.65          // set to 1.0, or less to cap the PWM_MAX value
+
+#define MOTOR_OPERATING_VOLTAGE 36          // motor's operating voltage (used to calculate max RPM)
+#define MOTOR_POWER_MAX_VOLTAGE 36          // max voltage of the motor's power source (used to calculate max RPM)
+#define MOTOR_POWER_MEASURED_VOLTAGE 24     // current voltage reading of the power connected to the motor (used for calibration)
+
+// linorobot2_hardware uses the terms ticks and pulses interchangeably
+// The product page (https://a.co/d/0iBI19xV) says 600 pulses per rev
+// Encoder.h uses half quadrature encoding, so we get 2x ticks per pulse - so 1200 ticks per rev
+// The tick counts below were confirmed via testing
+#define COUNTS_PER_REV1 1199                // wheel1 encoder's no of ticks per rev
+#define COUNTS_PER_REV2 1204                // wheel2 encoder's no of ticks per rev
 #define COUNTS_PER_REV3 450                 // wheel3 encoder's no of ticks per rev
 #define COUNTS_PER_REV4 450                 // wheel4 encoder's no of ticks per rev
-#define WHEEL_DIAMETER 0.0560               // wheel's diameter in meters
-#define LR_WHEELS_DISTANCE 0.224            // distance between left and right wheels
+
+// WHEEL DIA 6 1/2 inches
+#define WHEEL_DIAMETER 0.1651               // wheel's diameter in meters
+
+// WHEEL SPACING 17 5/8 inches
+#define LR_WHEELS_DISTANCE 0.4477           // distance between left and right wheels
+
 #define PWM_BITS 10                         // PWM Resolution of the microcontroller
 #define PWM_FREQUENCY 20000                 // PWM Frequency
 #define SERVO_BITS 12                       // Servo PWM resolution
 #define SERVO_FREQ 50                       // Servo PWM frequency
 
+
 // INVERT ENCODER COUNTS
-#define MOTOR1_ENCODER_INV false
-#define MOTOR2_ENCODER_INV false
+#define MOTOR1_ENCODER_INV false      // determined through test_motors that we should
+#define MOTOR2_ENCODER_INV true       // invert the count for encoder 2 and not encoder 1
 #define MOTOR3_ENCODER_INV false
 #define MOTOR4_ENCODER_INV false
 
 // INVERT MOTOR DIRECTIONS
-#define MOTOR1_INV false
+#define MOTOR1_INV false // this is done thru hard wiring the controller
 #define MOTOR2_INV false
 #define MOTOR3_INV false
 #define MOTOR4_INV false
@@ -95,14 +122,15 @@ ROBOT ORIENTATION
 #define MOTOR1_ENCODER_A 4
 #define MOTOR1_ENCODER_B 5
 
-#define MOTOR2_ENCODER_A 6
-#define MOTOR2_ENCODER_B 7
+#define MOTOR2_ENCODER_A 41
+#define MOTOR2_ENCODER_B 40
 
-#define MOTOR3_ENCODER_A 39
-#define MOTOR3_ENCODER_B 40
+#define MOTOR3_ENCODER_A -1
+#define MOTOR3_ENCODER_B -1
 
-#define MOTOR4_ENCODER_A 41
-#define MOTOR4_ENCODER_B 42
+#define MOTOR4_ENCODER_A -1
+#define MOTOR4_ENCODER_B -1
+
 
 // MOTOR PINS
 #ifdef USE_GENERIC_2_IN_MOTOR_DRIVER
@@ -128,22 +156,27 @@ ROBOT ORIENTATION
 
 #ifdef USE_GENERIC_1_IN_MOTOR_DRIVER
   #define MOTOR1_PWM 10
-  #define MOTOR1_IN_A 0
+  #define MOTOR1_IN_A 17
   #define MOTOR1_IN_B -1 //DON'T TOUCH THIS! This is just a placeholder
 
   #define MOTOR2_PWM 11
-  #define MOTOR2_IN_A 3
+  #define MOTOR2_IN_A 37
   #define MOTOR2_IN_B -1 //DON'T TOUCH THIS! This is just a placeholder
 
-  #define MOTOR3_PWM 12
-  #define MOTOR3_IN_A 45
+  #define MOTOR3_PWM -1
+  #define MOTOR3_IN_A -1
   #define MOTOR3_IN_B -1 //DON'T TOUCH THIS! This is just a placeholder
 
-  #define MOTOR4_PWM 13
-  #define MOTOR4_IN_A 46
+  #define MOTOR4_PWM -1
+  #define MOTOR4_IN_A -1
   #define MOTOR4_IN_B -1 //DON'T TOUCH THIS! This is just a placeholder
 
-  #define PWM_MAX pow(2, PWM_BITS) - 1
+  #define PWM_MAX_MOTOR1 int(pow(2,PWM_BITS)*MOTOR1_PWM_MAX_SAFETY_FACTOR)-1
+  #define PWM_MIN_MOTOR1 -PWM_MAX_MOTOR1
+  #define PWM_MAX_MOTOR2 int(pow(2,PWM_BITS)*MOTOR2_PWM_MAX_SAFETY_FACTOR)-1
+  #define PWM_MIN_MOTOR2 -PWM_MAX_MOTOR2
+  #define PWM_MAX_SAFETY_FACTOR MOTOR1_PWM_MAX_SAFETY_FACTOR
+  #define PWM_MAX PWM_MAX_MOTOR1
   #define PWM_MIN -PWM_MAX
 #endif
 
