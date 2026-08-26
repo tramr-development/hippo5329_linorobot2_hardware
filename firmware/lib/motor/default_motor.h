@@ -136,6 +136,11 @@ class NoReverseMotor: public Generic1
     private:
         int pwm_floor_;
 
+        static bool is_positive_nonzero(float value) {
+            int epsilon = 1e-4;
+            return value > epsilon;
+        }
+
     protected:
         void forward(int pwm) override
         {
@@ -160,7 +165,9 @@ class NoReverseMotor: public Generic1
             Generic1(pwm_frequency, pwm_bits, invert, pwm_pin, in_pin, unused)
             {
                 int pwm_max = (1 << pwm_bits) - 1;
-                pwm_floor_ = static_cast<int>(pwm_max * pwm_threshold);
+                pwm_floor_ = 0;
+                if (is_positive_nonzero(pwm_threshold))
+                    pwm_floor_ = static_cast<int>(pwm_max * pwm_threshold);
             }
 };
 

@@ -72,14 +72,13 @@ ROBOT ORIENTATION
 // RPM Calculation based on this website - https://areacalculators.com/wheel-speed-calculator/
 // using the Hover-1 Rocket's advertised max speed of 7 mph and 6.5 inch wheel diameter
 
-#define MAX_RPM_RATIO 0.48                  // max RPM allowed for each MAX_RPM_ALLOWED = MOTOR_MAX_RPM * MAX_RPM_RATIO
-// 7 mph is about 3.13 m/s. We want to cap the speed at 1.5 m/s, which is 48% of the max speed.
+#define MAX_RPM_RATIO 1.0                  // max RPM allowed for each MAX_RPM_ALLOWED = MOTOR_MAX_RPM * MAX_RPM_RATIO
+// ex. To cap the speed at 1.5 m/s, which is 48% of the Hover-1's max speed of 7 mph, i.e. 3.13 m/s), set the ratio to 0.48 
 
 // some custom settings
-#define MOTOR1_PWM_THRESHOLD 0.0            // ratio of PWM max to overcome static friction (0.0 means do not apply this setting)
-#define MOTOR2_PWM_THRESHOLD 0.0            // ratio of PWM max to overcome static friction (0.0 < threshold <= 1.0)
-#define MOTOR1_PWM_MAX_SAFETY_FACTOR 0.65          // set to 1.0, or less to cap the PWM_MAX value
-#define MOTOR2_PWM_MAX_SAFETY_FACTOR 0.65          // set to 1.0, or less to cap the PWM_MAX value
+#define PWM_THRESHOLD -1.0                  // ratio of PWM max to overcome static friction (0.0 < threshold <= 1.0)
+                                            // (set threshold to negative or 0.0 to skip this setting)
+#define PWM_MAX_SAFETY_FACTOR 1.0           // set to 1.0, or less to cap the PWM_MAX value
 
 #define MOTOR_OPERATING_VOLTAGE 36          // motor's operating voltage (used to calculate max RPM)
 #define MOTOR_POWER_MAX_VOLTAGE 36          // max voltage of the motor's power source (used to calculate max RPM)
@@ -171,12 +170,7 @@ ROBOT ORIENTATION
   #define MOTOR4_IN_A -1
   #define MOTOR4_IN_B -1 //DON'T TOUCH THIS! This is just a placeholder
 
-  #define PWM_MAX_MOTOR1 int(pow(2,PWM_BITS)*MOTOR1_PWM_MAX_SAFETY_FACTOR)-1
-  #define PWM_MIN_MOTOR1 -PWM_MAX_MOTOR1
-  #define PWM_MAX_MOTOR2 int(pow(2,PWM_BITS)*MOTOR2_PWM_MAX_SAFETY_FACTOR)-1
-  #define PWM_MIN_MOTOR2 -PWM_MAX_MOTOR2
-  #define PWM_MAX_SAFETY_FACTOR MOTOR1_PWM_MAX_SAFETY_FACTOR
-  #define PWM_MAX PWM_MAX_MOTOR1
+  #define PWM_MAX int(pow(2,PWM_BITS)*PWM_MAX_SAFETY_FACTOR)-1
   #define PWM_MIN -PWM_MAX
 #endif
 
